@@ -7,3 +7,4 @@ Audio + Video,LAV-DF,https://www.kaggle.com/datasets/elin75/localized-audio-visu
 Image,140K Real/Fake Deepfake Dataset,https://www.kaggle.com/datasets/tusharpadhy/deepfake-dataset,Real vs fake face images
 Image,StyleGAN/StyleGAN2 Deepfake Faces,https://www.kaggle.com/datasets/kshitizbhargava/deepfake-face-images,GAN-generated face detection
 Video,Deep Fake Detection Dataset (DFD),https://www.kaggle.com/datasets/sanikatiwarekar/deep-fake-detection-dfd-entire-original-dataset,Real vs manipulated video
+
