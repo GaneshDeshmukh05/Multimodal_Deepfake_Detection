@@ -1,5 +1,9 @@
 # Multimodal Deepfake Detection System
 
+
+## Deployments:  
+### https://multimodal-deepfake-detection-gdp.streamlit.app
+
 This project detects deepfakes across three modalities:
 
 - Image
