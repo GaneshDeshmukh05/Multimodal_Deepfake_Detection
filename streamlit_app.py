@@ -1,5 +1,6 @@
 import streamlit as st
 import html
+import textwrap
 
 
 # ============================================================
@@ -21,294 +22,326 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-.main {
-    padding: 2rem;
-}
+    /* ========================================================
+       GLOBAL
+       ======================================================== */
 
-/* ---------------- BUTTON ---------------- */
-
-.stButton > button {
-    width: 100%;
-    background-color: #FF6B6B;
-    color: white;
-    font-weight: 700;
-    padding: 0.75rem;
-    border-radius: 0.6rem;
-    border: none;
-}
-
-.stButton > button:hover {
-    background-color: #FF5252;
-    color: white;
-}
-
-
-/* ---------------- RESULT CARD ---------------- */
-
-.result-card {
-    border-radius: 18px;
-    overflow: hidden;
-    background: #171922;
-    border: 1px solid #303340;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    margin-top: 10px;
-}
-
-
-/* ---------------- RESULT HEADER ---------------- */
-
-.result-header {
-    padding: 22px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-}
-
-.result-header.real {
-    background: linear-gradient(
-        135deg,
-        #123c2a,
-        #195c3e
-    );
-    border-bottom: 1px solid #287a52;
-}
-
-.result-header.fake {
-    background: linear-gradient(
-        135deg,
-        #4a171d,
-        #721f29
-    );
-    border-bottom: 1px solid #a83240;
-}
-
-
-/* ---------------- STATUS ---------------- */
-
-.result-status {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.result-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.12);
-    font-size: 30px;
-    color: white;
-    flex-shrink: 0;
-}
-
-.result-title {
-    font-size: 24px;
-    font-weight: 800;
-    color: white;
-    line-height: 1.2;
-}
-
-.result-subtitle {
-    color: #c9cdd5;
-    font-size: 13px;
-    margin-top: 6px;
-    line-height: 1.4;
-}
-
-
-/* ---------------- CONFIDENCE ---------------- */
-
-.confidence-box {
-    text-align: right;
-    flex-shrink: 0;
-}
-
-.confidence-value {
-    font-size: 29px;
-    font-weight: 800;
-    color: white;
-    line-height: 1;
-}
-
-.confidence-label {
-    font-size: 11px;
-    color: #c9cdd5;
-    letter-spacing: 1px;
-    margin-top: 5px;
-}
-
-
-/* ---------------- BODY ---------------- */
-
-.result-body {
-    padding: 22px 24px;
-}
-
-
-/* ---------------- METRICS ---------------- */
-
-.metric-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    gap: 15px;
-}
-
-.metric-label {
-    color: #aeb3bf;
-    font-size: 14px;
-}
-
-.metric-value {
-    color: white;
-    font-weight: 700;
-    font-size: 14px;
-}
-
-
-/* ---------------- PROGRESS BAR ---------------- */
-
-.progress-bg {
-    width: 100%;
-    height: 9px;
-    background: #30333d;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 22px;
-}
-
-.progress-fill {
-    height: 100%;
-    border-radius: 10px;
-}
-
-.fake-progress {
-    background: #ff5964;
-}
-
-.real-progress {
-    background: #35c985;
-}
-
-
-/* ---------------- RISK ---------------- */
-
-.risk-badge {
-    display: inline-block;
-    padding: 6px 13px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-}
-
-.risk-low {
-    background: #153d2c;
-    color: #58dfa0;
-    border: 1px solid #236b4a;
-}
-
-.risk-medium {
-    background: #4b3b17;
-    color: #ffd35a;
-    border: 1px solid #796123;
-}
-
-.risk-high {
-    background: #49191f;
-    color: #ff7d87;
-    border: 1px solid #85313b;
-}
-
-
-/* ---------------- DETAILS ---------------- */
-
-.details-card {
-    margin-top: 18px;
-    padding: 16px 20px;
-    background: #1d2029;
-    border-radius: 12px;
-    border: 1px solid #303340;
-}
-
-.details-title {
-    color: #e7e9ed;
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 10px;
-}
-
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
-    padding: 9px 0;
-    border-bottom: 1px solid #2b2e38;
-}
-
-.detail-row:last-child {
-    border-bottom: none;
-}
-
-.detail-label {
-    color: #9298a6;
-    font-size: 13px;
-}
-
-.detail-value {
-    color: #e7e9ed;
-    font-size: 13px;
-    font-weight: 600;
-    text-align: right;
-    max-width: 70%;
-    word-break: break-word;
-}
-
-
-/* ---------------- ANALYSIS ---------------- */
-
-.analysis-summary {
-    margin-top: 16px;
-    padding: 13px 15px;
-    background: #20232d;
-    border-radius: 10px;
-    border-left: 3px solid #7c83fd;
-    color: #c9cdd5;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-
-/* ---------------- MOBILE ---------------- */
-
-@media (max-width: 768px) {
-
-    .result-header {
-        flex-direction: column;
-        align-items: flex-start;
+    .main {
+        padding: 2rem;
     }
 
+
+    /* ========================================================
+       BUTTON
+       ======================================================== */
+
+    .stButton > button {
+        width: 100%;
+        background-color: #FF6B6B;
+        color: white;
+        font-weight: bold;
+        padding: 0.75rem;
+        border-radius: 0.6rem;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .stButton > button:hover {
+        background-color: #FF5252;
+        color: white;
+    }
+
+
+    /* ========================================================
+       RESULT CARD
+       ======================================================== */
+
+    .result-card {
+        border-radius: 18px;
+        overflow: hidden;
+        background: #171922;
+        border: 1px solid #303340;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        margin-top: 10px;
+    }
+
+
+    /* ========================================================
+       RESULT HEADER
+       ======================================================== */
+
+    .result-header {
+        padding: 22px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .result-header.real {
+        background: linear-gradient(
+            135deg,
+            #123c2a,
+            #195c3e
+        );
+        border-bottom: 1px solid #287a52;
+    }
+
+    .result-header.fake {
+        background: linear-gradient(
+            135deg,
+            #4a171d,
+            #721f29
+        );
+        border-bottom: 1px solid #a83240;
+    }
+
+
+    /* ========================================================
+       RESULT STATUS
+       ======================================================== */
+
+    .result-status {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .result-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 30px;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .result-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: white;
+        line-height: 1.2;
+    }
+
+    .result-subtitle {
+        color: #c9cdd5;
+        font-size: 13px;
+        margin-top: 6px;
+        line-height: 1.4;
+    }
+
+
+    /* ========================================================
+       CONFIDENCE
+       ======================================================== */
+
     .confidence-box {
-        text-align: left;
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .confidence-value {
+        font-size: 29px;
+        font-weight: 800;
+        color: white;
+        line-height: 1;
+    }
+
+    .confidence-label {
+        font-size: 11px;
+        color: #c9cdd5;
+        letter-spacing: 1px;
+        margin-top: 5px;
+    }
+
+
+    /* ========================================================
+       RESULT BODY
+       ======================================================== */
+
+    .result-body {
+        padding: 22px 24px;
+    }
+
+
+    /* ========================================================
+       METRICS
+       ======================================================== */
+
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 15px;
+    }
+
+    .metric-label {
+        color: #aeb3bf;
+        font-size: 14px;
+    }
+
+    .metric-value {
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+
+    /* ========================================================
+       PROGRESS BAR
+       ======================================================== */
+
+    .progress-bg {
+        width: 100%;
+        height: 9px;
+        background: #30333d;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 22px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+    }
+
+    .fake-progress {
+        background: #ff5964;
+    }
+
+    .real-progress {
+        background: #35c985;
+    }
+
+
+    /* ========================================================
+       RISK BADGE
+       ======================================================== */
+
+    .risk-badge {
+        display: inline-block;
+        padding: 6px 13px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+    .risk-low {
+        background: #153d2c;
+        color: #58dfa0;
+        border: 1px solid #236b4a;
+    }
+
+    .risk-medium {
+        background: #4b3b17;
+        color: #ffd35a;
+        border: 1px solid #796123;
+    }
+
+    .risk-high {
+        background: #49191f;
+        color: #ff7d87;
+        border: 1px solid #85313b;
+    }
+
+
+    /* ========================================================
+       DETAILS CARD
+       ======================================================== */
+
+    .details-card {
+        margin-top: 18px;
+        padding: 16px 20px;
+        background: #1d2029;
+        border-radius: 12px;
+        border: 1px solid #303340;
+    }
+
+    .details-title {
+        color: #e7e9ed;
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 10px;
     }
 
     .detail-row {
-        flex-direction: column;
-        gap: 3px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        padding: 9px 0;
+        border-bottom: 1px solid #2b2e38;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        color: #9298a6;
+        font-size: 13px;
+        flex-shrink: 0;
     }
 
     .detail-value {
-        text-align: left;
-        max-width: 100%;
+        color: #e7e9ed;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: right;
+        max-width: 70%;
+        word-break: break-word;
     }
 
-}
+
+    /* ========================================================
+       ANALYSIS SUMMARY
+       ======================================================== */
+
+    .analysis-summary {
+        margin-top: 16px;
+        padding: 13px 15px;
+        background: #20232d;
+        border-radius: 10px;
+        border-left: 3px solid #7c83fd;
+        color: #c9cdd5;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+
+    /* ========================================================
+       MOBILE
+       ======================================================== */
+
+    @media (max-width: 768px) {
+
+        .result-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .confidence-box {
+            text-align: left;
+        }
+
+        .detail-row {
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .detail-value {
+            text-align: left;
+            max-width: 100%;
+        }
+
+    }
 
 </style>
 """, unsafe_allow_html=True)
@@ -321,7 +354,7 @@ st.markdown("""
 def display_prediction_result(result, uploaded_file, modality):
 
     # --------------------------------------------------------
-    # Get prediction values
+    # Extract prediction results
     # --------------------------------------------------------
 
     is_fake = bool(
@@ -336,7 +369,7 @@ def display_prediction_result(result, uploaded_file, modality):
         result.get("probability_fake", 0)
     )
 
-    # Keep values between 0 and 1
+    # Protect UI from invalid model values
     confidence = max(
         0.0,
         min(confidence, 1.0)
@@ -358,6 +391,7 @@ def display_prediction_result(result, uploaded_file, modality):
     if is_fake:
 
         icon = "⚠️"
+
         title = "DEEPFAKE DETECTED"
 
         subtitle = (
@@ -366,11 +400,13 @@ def display_prediction_result(result, uploaded_file, modality):
         )
 
         header_class = "fake"
+
         progress_class = "fake-progress"
 
     else:
 
         icon = "✓"
+
         title = f"AUTHENTIC {modality.upper()}"
 
         subtitle = (
@@ -379,11 +415,12 @@ def display_prediction_result(result, uploaded_file, modality):
         )
 
         header_class = "real"
+
         progress_class = "real-progress"
 
 
     # --------------------------------------------------------
-    # Risk calculation
+    # Risk level
     # --------------------------------------------------------
 
     if not is_fake:
@@ -425,7 +462,7 @@ def display_prediction_result(result, uploaded_file, modality):
 
 
     # --------------------------------------------------------
-    # Escape user/model strings
+    # Escape dynamic values
     # --------------------------------------------------------
 
     file_name = html.escape(
@@ -438,7 +475,7 @@ def display_prediction_result(result, uploaded_file, modality):
 
 
     # --------------------------------------------------------
-    # Analysis text
+    # Analysis message
     # --------------------------------------------------------
 
     if fake_probability >= 0.80:
@@ -464,8 +501,12 @@ def display_prediction_result(result, uploaded_file, modality):
 
 
     # --------------------------------------------------------
+    # Build HTML
+    #
     # IMPORTANT:
-    # Build HTML without Markdown code formatting
+    # Do NOT indent the final HTML when passing it to
+    # st.markdown(), otherwise Markdown may interpret it
+    # as a code block.
     # --------------------------------------------------------
 
     result_html = f"""
@@ -492,7 +533,6 @@ def display_prediction_result(result, uploaded_file, modality):
             </div>
 
         </div>
-
 
         <div class="confidence-box">
 
@@ -621,14 +661,26 @@ def display_prediction_result(result, uploaded_file, modality):
 """
 
     # --------------------------------------------------------
-    # THIS IS THE IMPORTANT FIX
+    # Remove indentation
     # --------------------------------------------------------
 
-    st.html(result_html)
+    result_html = textwrap.dedent(
+        result_html
+    ).strip()
 
 
     # --------------------------------------------------------
-    # Advanced analysis
+    # Render HTML
+    # --------------------------------------------------------
+
+    st.markdown(
+        result_html,
+        unsafe_allow_html=True
+    )
+
+
+    # --------------------------------------------------------
+    # Advanced Analysis
     # --------------------------------------------------------
 
     if "extra" in result:
@@ -701,7 +753,7 @@ st.sidebar.info(
 
 
 # ============================================================
-# MAIN COLUMNS
+# MAIN LAYOUT
 # ============================================================
 
 col1, col2 = st.columns(
@@ -711,7 +763,7 @@ col1, col2 = st.columns(
 
 
 # ============================================================
-# IMAGE
+# IMAGE DETECTION
 # ============================================================
 
 if modality == "Image":
@@ -772,9 +824,9 @@ if modality == "Image":
                             )
 
                             display_prediction_result(
-                                result,
-                                uploaded_file,
-                                "Image"
+                                result=result,
+                                uploaded_file=uploaded_file,
+                                modality="Image"
                             )
 
                     except Exception as e:
@@ -785,7 +837,7 @@ if modality == "Image":
 
 
 # ============================================================
-# AUDIO
+# AUDIO DETECTION
 # ============================================================
 
 elif modality == "Audio":
@@ -844,9 +896,9 @@ elif modality == "Audio":
                             )
 
                             display_prediction_result(
-                                result,
-                                uploaded_file,
-                                "Audio"
+                                result=result,
+                                uploaded_file=uploaded_file,
+                                modality="Audio"
                             )
 
                     except Exception as e:
@@ -857,7 +909,7 @@ elif modality == "Audio":
 
 
 # ============================================================
-# VIDEO
+# VIDEO DETECTION
 # ============================================================
 
 elif modality == "Video":
@@ -917,9 +969,9 @@ elif modality == "Video":
                             )
 
                             display_prediction_result(
-                                result,
-                                uploaded_file,
-                                "Video"
+                                result=result,
+                                uploaded_file=uploaded_file,
+                                modality="Video"
                             )
 
                     except Exception as e:
