@@ -1,6 +1,9 @@
 import streamlit as st
 import io
+import tempfile
 from pathlib import Path
+
+import numpy as np
 
 # Set page config
 st.set_page_config(
@@ -59,6 +62,155 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+def render_image_analysis(image_bytes: bytes) -> None:
+    """Render visual diagnostics for an uploaded image."""
+    from PIL import Image
+
+    with Image.open(io.BytesIO(image_bytes)) as source_image:
+        image = source_image.convert("RGB")
+        pixels = np.asarray(image)
+
+    height, width = pixels.shape[:2]
+    channel_means = pixels.mean(axis=(0, 1))
+    brightness = float(pixels.mean() / 255 * 100)
+    contrast = float(pixels.std())
+    histograms = {
+        "Red": np.bincount(pixels[:, :, 0].ravel(), minlength=256),
+        "Green": np.bincount(pixels[:, :, 1].ravel(), minlength=256),
+        "Blue": np.bincount(pixels[:, :, 2].ravel(), minlength=256),
+    }
+
+    with st.expander("🖼️ Image Analysis", expanded=True):
+        metrics = st.columns(4)
+        metrics[0].metric("Dimensions", f"{width} × {height}")
+        metrics[1].metric("Brightness", f"{brightness:.1f}%")
+        metrics[2].metric("Contrast", f"{contrast:.1f}")
+        metrics[3].metric(
+            "Average RGB",
+            "/".join(str(round(value)) for value in channel_means),
+        )
+
+        st.caption("RGB channel distribution — left is darker pixel values; right is lighter.")
+        st.line_chart(histograms, height=260, use_container_width=True)
+
+
+def create_temporary_upload(file_bytes: bytes, filename: str, default_suffix: str) -> Path:
+    """Persist an upload briefly when a decoder requires a file path."""
+    suffix = Path(filename).suffix or default_suffix
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temporary_file:
+        temporary_file.write(file_bytes)
+        return Path(temporary_file.name)
+
+
+def render_audio_analysis(audio_bytes: bytes, filename: str) -> None:
+    """Render a waveform and mel spectrogram for an uploaded audio file."""
+    import librosa
+
+    temporary_path = create_temporary_upload(audio_bytes, filename, ".wav")
+    try:
+        samples, sample_rate = librosa.load(str(temporary_path), sr=None, mono=True)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    if samples.size == 0:
+        raise ValueError("The audio file did not contain any samples.")
+
+    duration = len(samples) / sample_rate
+    analysis_samples = samples[: min(len(samples), sample_rate * 60)]
+    waveform_step = max(1, len(analysis_samples) // 5_000)
+    waveform = analysis_samples[::waveform_step]
+
+    mel_spectrogram = librosa.feature.melspectrogram(
+        y=analysis_samples,
+        sr=sample_rate,
+        n_mels=128,
+    )
+    spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
+    minimum, maximum = spectrogram_db.min(), spectrogram_db.max()
+    if maximum > minimum:
+        spectrogram_image = ((spectrogram_db - minimum) / (maximum - minimum) * 255).astype(np.uint8)
+    else:
+        spectrogram_image = np.zeros_like(spectrogram_db, dtype=np.uint8)
+
+    with st.expander("🎵 Audio Analysis", expanded=True):
+        metrics = st.columns(4)
+        metrics[0].metric("Duration", f"{duration:.2f} sec")
+        metrics[1].metric("Sample Rate", f"{sample_rate:,} Hz")
+        metrics[2].metric("Peak Amplitude", f"{np.abs(samples).max():.3f}")
+        metrics[3].metric("RMS Level", f"{np.sqrt(np.mean(samples ** 2)):.3f}")
+
+        st.markdown("**Waveform**")
+        st.line_chart({"Amplitude": waveform}, height=220, use_container_width=True)
+
+        st.markdown("**Mel Spectrogram**")
+        st.image(
+            np.flipud(spectrogram_image),
+            caption="Frequency content over time",
+            clamp=True,
+            use_column_width=True,
+        )
+        if len(analysis_samples) < len(samples):
+            st.caption("The waveform and spectrogram show the first 60 seconds of this audio file.")
+
+
+def render_video_analysis(video_bytes: bytes, filename: str) -> None:
+    """Render evenly sampled video frames and simple frame-level diagnostics."""
+    import cv2
+
+    temporary_path = create_temporary_upload(video_bytes, filename, ".mp4")
+
+    capture = cv2.VideoCapture(str(temporary_path))
+    try:
+        frame_count = max(0, int(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
+        frames_per_second = capture.get(cv2.CAP_PROP_FPS) or 0.0
+        width = max(0, int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)))
+        height = max(0, int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        sample_count = min(6, frame_count)
+        if sample_count == 0:
+            raise ValueError("No readable frames were found in this video file.")
+
+        frame_positions = np.linspace(0, frame_count - 1, sample_count, dtype=int)
+        sampled_frames = []
+        brightness_values = []
+        for position in frame_positions:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, int(position))
+            success, frame = capture.read()
+            if success:
+                sampled_frames.append((int(position), cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+                brightness_values.append(float(frame.mean()))
+    finally:
+        capture.release()
+        temporary_path.unlink(missing_ok=True)
+
+    if not sampled_frames:
+        raise ValueError("Video frames could not be decoded.")
+
+    duration = frame_count / frames_per_second if frames_per_second else 0.0
+    with st.expander("🎞️ Video Analysis", expanded=True):
+        metrics = st.columns(4)
+        metrics[0].metric("Resolution", f"{width} × {height}")
+        metrics[1].metric("Frame Rate", f"{frames_per_second:.2f} FPS")
+        metrics[2].metric("Duration", f"{duration:.2f} sec")
+        metrics[3].metric("Frames Sampled", len(sampled_frames))
+
+        st.markdown("**Sample Frames**")
+        frame_columns = st.columns(min(3, len(sampled_frames)))
+        for index, (position, frame) in enumerate(sampled_frames):
+            timestamp = position / frames_per_second if frames_per_second else 0.0
+            with frame_columns[index % len(frame_columns)]:
+                st.image(frame, caption=f"Frame {position} · {timestamp:.2f}s", use_column_width=True)
+
+        st.caption("Average brightness across the sampled frames.")
+        st.line_chart({"Brightness": brightness_values}, height=180, use_container_width=True)
+
+
+def render_analysis(analysis_name: str, renderer, *args) -> None:
+    """Keep optional visual diagnostics from interrupting a completed prediction."""
+    try:
+        renderer(*args)
+    except Exception as error:
+        st.warning(f"{analysis_name} could not be generated: {error}")
+
+
 # Title
 st.title("🎬 Multimodal Deepfake Detection")
 st.markdown("Detect deepfakes in images, audio, and videos using advanced neural networks")
@@ -97,7 +249,7 @@ if modality == "Image":
                     try:
                         from image_model.image_predict import predict_image_bytes
                         
-                        image_bytes = uploaded_file.read()
+                        image_bytes = uploaded_file.getvalue()
                         result = predict_image_bytes(image_bytes, uploaded_file.name)
                         
                         with col2:
@@ -128,6 +280,8 @@ if modality == "Image":
                                     </div>
                                 """, unsafe_allow_html=True)
                             
+                            render_analysis("Image analysis", render_image_analysis, image_bytes)
+
                             # Additional info
                             with st.expander("📋 Details"):
                                 st.write(f"**File:** {uploaded_file.name}")
@@ -156,7 +310,7 @@ elif modality == "Audio":
                     try:
                         from audio_model.audio_predict import predict_audio_bytes
                         
-                        audio_bytes = uploaded_file.read()
+                        audio_bytes = uploaded_file.getvalue()
                         result = predict_audio_bytes(audio_bytes, uploaded_file.name)
                         
                         with col2:
@@ -187,6 +341,13 @@ elif modality == "Audio":
                                     </div>
                                 """, unsafe_allow_html=True)
                             
+                            render_analysis(
+                                "Audio analysis",
+                                render_audio_analysis,
+                                audio_bytes,
+                                uploaded_file.name,
+                            )
+
                             # Additional info
                             with st.expander("📋 Details"):
                                 st.write(f"**File:** {uploaded_file.name}")
@@ -215,7 +376,7 @@ elif modality == "Video":
                     try:
                         from video_model.video_predict import predict_video_bytes
                         
-                        video_bytes = uploaded_file.read()
+                        video_bytes = uploaded_file.getvalue()
                         result = predict_video_bytes(video_bytes, uploaded_file.name)
                         
                         with col2:
@@ -246,6 +407,13 @@ elif modality == "Video":
                                     </div>
                                 """, unsafe_allow_html=True)
                             
+                            render_analysis(
+                                "Video analysis",
+                                render_video_analysis,
+                                video_bytes,
+                                uploaded_file.name,
+                            )
+
                             # Additional info
                             with st.expander("📋 Details"):
                                 st.write(f"**File:** {uploaded_file.name}")
